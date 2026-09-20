@@ -48,6 +48,13 @@ test('GET /styles.css and /script.js serve the frontend assets', async () => {
   assert.match(jsResponse.headers['content-type'], /javascript|text\/javascript/);
 });
 
+test('GET /images/perezosa.jpg serves the hero photo', async () => {
+  const response = await request(app).get('/images/perezosa.jpg');
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers['content-type'], /image\/jpeg/);
+});
+
 test('POST /api/checkout creates a checkout session', async () => {
   const response = await request(app)
     .post('/api/checkout')

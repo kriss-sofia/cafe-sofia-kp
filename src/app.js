@@ -7,6 +7,7 @@ const app = express();
 const rootDir = path.join(__dirname, '..');
 const stylesPath = path.join(rootDir, 'styles.css');
 const scriptPath = path.join(rootDir, 'script.js');
+const slothImagePath = path.join(rootDir, 'images', 'perezosa.jpg');
 
 app.use(cors());
 app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
@@ -19,6 +20,10 @@ app.get('/styles.css', (req, res) => {
 
 app.get('/script.js', (req, res) => {
   res.sendFile(scriptPath);
+});
+
+app.get('/images/perezosa.jpg', (req, res) => {
+  res.sendFile(slothImagePath);
 });
 
 const products = [
