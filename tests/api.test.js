@@ -37,6 +37,17 @@ test('GET /api/health returns service status', async () => {
   assert.equal(response.body.name, 'Café SofIA API');
 });
 
+test('GET /styles.css and /script.js serve the frontend assets', async () => {
+  const cssResponse = await request(app).get('/styles.css');
+  const jsResponse = await request(app).get('/script.js');
+
+  assert.equal(cssResponse.status, 200);
+  assert.match(cssResponse.headers['content-type'], /css/);
+
+  assert.equal(jsResponse.status, 200);
+  assert.match(jsResponse.headers['content-type'], /javascript|text\/javascript/);
+});
+
 test('POST /api/checkout creates a checkout session', async () => {
   const response = await request(app)
     .post('/api/checkout')

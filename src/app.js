@@ -5,11 +5,21 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
+const stylesPath = path.join(rootDir, 'styles.css');
+const scriptPath = path.join(rootDir, 'script.js');
 
 app.use(cors());
 app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
 app.use(express.json());
-app.use(express.static(rootDir));
+app.use(express.static(rootDir, { index: false }));
+
+app.get('/styles.css', (req, res) => {
+  res.sendFile(stylesPath);
+});
+
+app.get('/script.js', (req, res) => {
+  res.sendFile(scriptPath);
+});
 
 const products = [
   { id: 'espresso', name: 'Espresso', price: 800, description: 'Corto, intenso y directo.', category: 'espresso', stock: 40 },
