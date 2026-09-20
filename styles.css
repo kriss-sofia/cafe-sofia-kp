@@ -173,9 +173,45 @@
   .btn-outline { background: transparent; color: var(--coffee-dark); border: 2px solid var(--coffee-dark); padding: 11px 22px; }
   .btn-outline:hover { background: var(--coffee-dark); color: var(--bg); }
 
-  .vinyl-figure { display: flex; justify-content: center; }
+  .hero-visual {
+    position: relative;
+    min-height: 450px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-photo {
+    width: min(390px, 82vw);
+    margin: 0;
+    padding: 12px 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    box-shadow: 12px 16px 0 rgba(90, 59, 34, 0.15);
+    transform: rotate(2deg);
+  }
+  .hero-photo img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    object-position: center;
+    filter: sepia(0.12) saturate(0.9) contrast(1.04);
+  }
+  .hero-photo figcaption {
+    padding-top: 10px;
+    color: var(--coffee-dark);
+    font-family: var(--font-stamp);
+    font-size: 0.72rem;
+    text-align: center;
+  }
+  .vinyl-figure {
+    position: absolute;
+    right: -8px;
+    bottom: 18px;
+    z-index: 1;
+  }
   .vinyl {
-    width: min(320px, 80vw);
+    width: min(150px, 32vw);
     aspect-ratio: 1;
     border-radius: 50%;
     background:
@@ -214,6 +250,12 @@
     font-size: 0.85rem;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 780px) {
+    .hero-visual { min-height: 390px; }
+    .hero-photo { width: min(330px, 78vw); }
+    .vinyl-figure { right: 2%; bottom: 10px; }
+  }
 
   section { padding: 70px 0; }
   .section-head { max-width: 60ch; margin-bottom: 40px; }
