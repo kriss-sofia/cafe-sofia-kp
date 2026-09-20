@@ -1,12 +1,15 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
 
 const app = express();
+const rootDir = path.join(__dirname, '..');
 
 app.use(cors());
 app.use('/api/webhook/stripe', express.raw({ type: 'application/json' }));
 app.use(express.json());
+app.use(express.static(rootDir));
 
 const products = [
   { id: 'espresso', name: 'Espresso', price: 800, description: 'Corto, intenso y directo.', category: 'espresso', stock: 40 },
@@ -56,6 +59,18 @@ function getOrderItems(items) {
     };
   });
 }
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(rootDir, 'index.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(rootDir, 'admin.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(rootDir, 'admin.html'));
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', name: 'Café SofIA API' });
