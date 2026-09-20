@@ -25,6 +25,7 @@ test('POST /api/orders creates an order with total', async () => {
 
   assert.equal(response.status, 201);
   assert.ok(response.body.id);
+  assert.equal(typeof response.body.orderNumber, 'number');
   assert.equal(response.body.status, 'pendiente');
   assert.equal(response.body.total, 3100);
 });
@@ -62,6 +63,14 @@ test('frontend uses relative API URLs for every device', async () => {
   assert.doesNotMatch(response.text, /https?:\/\/localhost(?::\d+)?/);
   assert.match(response.text, /fetch\('\/api\/products'\)/);
   assert.match(response.text, /fetch\('\/api\/orders'/);
+});
+
+test('frontend displays the server-generated order number', async () => {
+  const response = await request(app).get('/script.js');
+
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(response.text, /orderCounter/);
+  assert.match(response.text, /order\.orderNumber/);
 });
 
 test('POST /api/checkout creates a checkout session', async () => {

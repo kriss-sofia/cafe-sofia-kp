@@ -106,7 +106,6 @@
   document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
   document.getElementById('cartOverlay').addEventListener('click', closeCart);
 
-  var orderCounter = 1;
   function submitOrder() {
     var ids = Object.keys(cart);
     if (!ids.length) return;
@@ -138,7 +137,7 @@
 
         document.getElementById('ticketSummary').innerHTML = lines.join('');
         document.getElementById('ticketTotal').textContent = fmt(order.total);
-        document.getElementById('ticketNumber').textContent = 'Orden N.º ' + String(orderCounter++).padStart(3, '0');
+        document.getElementById('ticketNumber').textContent = 'Orden N.º ' + String(order.orderNumber).padStart(3, '0');
 
         cart = {};
         renderCart();

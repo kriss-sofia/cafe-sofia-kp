@@ -82,6 +82,14 @@ https://tu-proyecto.vercel.app/api/webhook/stripe
 Para producción real conviene:
 
 - conectar Supabase/PostgreSQL en vez de datos en memoria
+
+## Persistencia de órdenes
+
+Configura `DATABASE_URL` en Vercel con la cadena de conexión de PostgreSQL/Supabase.
+La aplicación crea automáticamente la tabla `cafe_orders` al iniciar y PostgreSQL
+asigna `order_number` mediante `BIGSERIAL`, por lo que el número de orden es único
+entre dispositivos y despliegues. Sin `DATABASE_URL`, el proyecto usa datos en
+memoria solo para desarrollo local.
 - guardar pedidos persistentes
 - guardar pagos reales y eventos de Stripe
 - proteger rutas de administrador

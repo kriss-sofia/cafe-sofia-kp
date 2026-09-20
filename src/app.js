@@ -1,7 +1,9 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
+const orderStore = require('./order-store');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -35,6 +37,7 @@ const products = [
 const orders = [
   {
     id: 'order-101',
+    orderNumber: 101,
     status: 'pendiente',
     total: 3100,
     items: [
@@ -46,6 +49,7 @@ const orders = [
   },
   {
     id: 'order-102',
+    orderNumber: 102,
     status: 'pagado',
     total: 1500,
     items: [
@@ -54,6 +58,7 @@ const orders = [
     createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
   }
 ];
+let nextLocalOrderNumber = 103;
 
 function getOrderItems(items) {
   return items.map(({ productId, quantity }) => {
@@ -95,7 +100,7 @@ app.get('/api/products', (req, res) => {
   res.json(products);
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const { items = [] } = req.body || {};
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -106,23 +111,34 @@ app.post('/api/orders', (req, res) => {
   const total = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
   const order = {
-    id: `order-${Date.now()}`,
+    id: `order-${crypto.randomUUID()}`,
+    orderNumber: nextLocalOrderNumber++,
     status: 'pendiente',
     total,
     items: orderItems,
     createdAt: new Date().toISOString()
   };
 
-  orders.unshift(order);
-
-  res.status(201).json(order);
+  try {
+    const savedOrder = await orderStore.saveOrder(order);
+    orders.unshift(savedOrder);
+    res.status(201).json(savedOrder);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudo guardar el pedido' });
+  }
 });
 
-app.get('/api/orders', (req, res) => {
-  res.json(orders);
+app.get('/api/orders', async (req, res) => {
+  try {
+    res.json(await orderStore.listOrders(orders));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudieron cargar los pedidos' });
+  }
 });
 
-app.patch('/api/orders/:id/status', (req, res) => {
+app.patch('/api/orders/:id/status', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body || {};
   const validStatuses = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado', 'cancelado'];
@@ -137,8 +153,15 @@ app.patch('/api/orders/:id/status', (req, res) => {
     return res.status(404).json({ error: 'order not found' });
   }
 
-  order.status = status;
-  res.json(order);
+  try {
+    const updatedOrder = await orderStore.updateOrderStatus(id, status, order);
+    if (!updatedOrder) return res.status(404).json({ error: 'order not found' });
+    order.status = status;
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'No se pudo actualizar el pedido' });
+  }
 });
 
 app.get('/api/admin/summary', (req, res) => {
@@ -182,6 +205,7 @@ app.post('/api/checkout', async (req, res) => {
   }
 
   try {
+    const appUrl = `${req.protocol}://${req.get('host')}`;
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -196,8 +220,8 @@ app.post('/api/checkout', async (req, res) => {
       metadata: {
         orderId: `order-${Date.now()}`
       },
-      success_url: 'http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'http://localhost:3000/cancel'
+      success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cancel`
     });
 
     return res.json({
