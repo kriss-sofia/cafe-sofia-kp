@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Café SofIA — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Vollkorn:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      body {
+        background: #f1e4c9;
+      }
+      .admin-shell {
+        max-width: 1180px;
+        margin: 42px auto;
+        padding: 0 20px 40px;
+      }
+      .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+      }
+      .admin-header h1 {
+        margin: 0;
+        font-family: 'Abril Fatface', serif;
+        color: #3b2716;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 18px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: #f5ead3;
+        border: 1px solid #c7ae81;
+        padding: 18px 20px;
+        box-shadow: 4px 4px 0 #c7ae81;
+      }
+      .stat-label {
+        font-family: 'Special Elite', monospace;
+        color: #8e3e17;
+        font-size: 0.78rem;
+        display: block;
+        margin-bottom: 10px;
+      }
+      .stat-value {
+        font-family: 'Abril Fatface', serif;
+        color: #2b2016;
+        font-size: clamp(1.5rem, 3vw, 2.1rem);
+      }
+      .panel-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 22px;
+      }
+      .panel {
+        background: #f5ead3;
+        border: 1px solid #c7ae81;
+        padding: 22px;
+      }
+      .panel h2 {
+        font-family: 'Abril Fatface', serif;
+        color: #3b2716;
+        margin-top: 0;
+      }
+      .panel table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .panel th, .panel td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px dashed #c7ae81;
+        font-size: 0.95rem;
+      }
+      .tag {
+        display: inline-block;
+        font-family: 'Special Elite', monospace;
+        background: #d9c49b;
+        color: #3b2716;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+      }
+      .low-stock-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 12px;
+      }
+      .low-stock-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #ecdfc4;
+        border: 1px solid #c7ae81;
+      }
+      .loading {
+        font-family: 'Special Elite', monospace;
+        color: #5a3b22;
+      }
+      @media (max-width: 900px) {
+        .stats, .panel-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-shell">
+      <header class="admin-header">
+        <h1>Café SofIA — Panel</h1>
+        <button class="btn btn-primary" onclick="window.location.href='index.html'">Volver al café</button>
+      </header>
+
+      <section class="stats" id="stats"></section>
+
+      <section class="panel-grid">
+        <div class="panel">
+          <h2>Últimos pedidos</h2>
+          <div id="ordersTable">Cargando pedidos...</div>
+        </div>
+
+        <div class="panel">
+          <h2>Inventario crítico</h2>
+          <ul class="low-stock-list" id="lowStockList"></ul>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      async function loadAdminData() {
+        try {
+          const [summaryRes, ordersRes] = await Promise.all([
+            fetch('http://localhost:3000/api/admin/summary'),
+            fetch('http://localhost:3000/api/orders')
+          ]);
+
+          if (!summaryRes.ok || !ordersRes.ok) {
+            throw new Error('No se pudo cargar el panel admin');
+          }
+
+          const summary = await summaryRes.json();
+          const orders = await ordersRes.json();
+
+          renderStats(summary);
+          renderOrders(orders);
+          renderLowStock(summary.lowStock || []);
+        } catch (error) {
+          console.error(error);
+          document.getElementById('stats').innerHTML = '<div class="stat-card"><span class="stat-label">Error</span><div class="stat-value">Sin conexión</div></div>';
+          document.getElementById('ordersTable').innerHTML = '<p class="loading">No se pudo conectar con la API.</p>';
+        }
+      }
+
+      function renderStats(summary) {
+        const totalRevenue = Number(summary.totalRevenue || 0);
+        const totalOrders = Number(summary.totalOrders || 0);
+        const pendingOrders = Number(summary.pendingOrders || 0);
+        const bestSeller = summary.bestSeller || 'Sin datos';
+
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-card">
+            <span class="stat-label">Ingresos</span>
+            <div class="stat-value">₡${totalRevenue.toLocaleString('es-CR')}</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pedidos</span>
+            <div class="stat-value">${totalOrders}</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pendientes</span>
+            <div class="stat-value">${pendingOrders}</div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Más vendido</span>
+            <div class="stat-value">${bestSeller}</div>
+          </div>
+        `;
+      }
+
+      async function updateOrderStatus(orderId, status) {
+        const response = await fetch(`http://localhost:3000/api/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo actualizar el pedido');
+        }
+
+        await loadAdminData();
+      }
+
+      function renderOrders(orders) {
+        if (!Array.isArray(orders) || !orders.length) {
+          document.getElementById('ordersTable').innerHTML = '<p class="loading">No hay pedidos aún.</p>';
+          return;
+        }
+
+        const rows = orders.slice(0, 6).map((order) => {
+          const statuses = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado', 'cancelado'];
+          const options = statuses.map((status) => {
+            const selected = status === order.status ? 'selected' : '';
+            return `<option value="${status}" ${selected}>${status}</option>`;
+          }).join('');
+
+          return `
+            <tr>
+              <td>${order.id}</td>
+              <td>${new Date(order.createdAt).toLocaleString('es-CR')}</td>
+              <td>
+                <select data-order-id="${order.id}" class="status-select">
+                  ${options}
+                </select>
+              </td>
+              <td>₡${Number(order.total || 0).toLocaleString('es-CR')}</td>
+            </tr>
+          `;
+        }).join('');
+
+        document.getElementById('ordersTable').innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Hora</th>
+                <th>Estado</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+
+        document.querySelectorAll('.status-select').forEach((select) => {
+          select.addEventListener('change', async (event) => {
+            const orderId = event.target.getAttribute('data-order-id');
+            const nextStatus = event.target.value;
+            try {
+              await updateOrderStatus(orderId, nextStatus);
+            } catch (error) {
+              console.error(error);
+              alert('No se pudo cambiar el estado del pedido.');
+            }
+          });
+        });
+      }
+
+      function renderLowStock(items) {
+        if (!Array.isArray(items) || !items.length) {
+          document.getElementById('lowStockList').innerHTML = '<li><span>No hay productos críticos</span></li>';
+          return;
+        }
+
+        document.getElementById('lowStockList').innerHTML = items.map((item) => `
+          <li>
+            <span>${item.name}</span>
+            <strong>${item.stock} / ${item.minimum}</strong>
+          </li>
+        `).join('');
+      }
+
+      loadAdminData();
+    </script>
+  </body>
+</html>

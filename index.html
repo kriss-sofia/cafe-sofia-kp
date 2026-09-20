@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Café SofIA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Vollkorn:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#inicio"><span class="disc"></span>Café SofIA</a>
+    <nav class="links">
+      <a href="#inicio">Inicio</a>
+      <a href="#menu">Menú</a>
+      <a href="#chat">Chatea con SofIA</a>
+      <a href="#desafio">Desafío</a>
+    </nav>
+    <button class="cart-pill" id="cartOpenBtn">☕ Carrito (<span id="cartCount">0</span>)</button>
+  </div>
+</header>
+
+<section class="hero" id="inicio">
+  <div class="hero-inner">
+    <div>
+      <span class="eyebrow-stamp">Un café de ADEN — Edición 1950</span>
+      <h1 class="title">Café SofIA</h1>
+      <p class="slogan">Café con ritmo, servido por inteligencia.</p>
+      <p class="lead">Un rincón vintage donde el jazz nunca dejó de sonar. Aquí te sirve SofIA, la inteligencia artificial agéntica que administra el local — y, mientras prepara tu café, te enseña a pensar como ella.</p>
+      <div class="actions">
+        <a href="#menu" class="btn btn-primary">Ver el menú</a>
+        <a href="#chat" class="btn btn-outline">Chatea con SofIA</a>
+      </div>
+    </div>
+    <div class="vinyl-figure"><div class="vinyl"></div></div>
+  </div>
+</section>
+
+<section class="concept">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">El concepto</span>
+      <h2>El café es la excusa. La formación es el punto.</h2>
+    </div>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <span class="phone-icon">☎️</span>
+        <h3>Un café que enseña</h3>
+        <p>Cada visita deja algo más que una taza: deja una idea nueva sobre cómo piensa y actúa una IA agéntica.</p>
+      </div>
+      <div class="concept-card">
+        <span class="phone-icon">💿</span>
+        <h3>Gestionado por SofIA</h3>
+        <p>SofIA no solo responde: percibe, decide y actúa sobre un negocio real, en tiempo real, frente a ti.</p>
+      </div>
+      <div class="concept-card">
+        <span class="phone-icon">🎷</span>
+        <h3>Hecho por arquitectos</h3>
+        <p>Alumnos de ADEN diseñan y sostienen este café para que funcione de verdad — no es una simulación.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="menu">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">La carta</span>
+      <h2>Tres discos, tres cafés</h2>
+    </div>
+    <div class="menu-grid" id="menuGrid"></div>
+  </div>
+</section>
+
+<section id="chat" style="background: var(--bg-deep); border-top:1px solid var(--card-line); border-bottom:1px solid var(--card-line);">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Línea directa</span>
+      <h2>Chatea con SofIA</h2>
+    </div>
+    <div class="chat-wrap">
+      <div class="chat-topbar">☎ Conectando con SofIA — mesa 12</div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-options" id="chatOptions"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Escribe tu propia pregunta..." />
+        <button id="chatSendBtn">Enviar</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="desafio">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Antes de irte</span>
+      <h2>El desafío del día</h2>
+    </div>
+    <div class="challenge-ticket">
+      <span class="challenge-label">Ticket N.º 001 — IA Agéntica</span>
+      <h3>¿Qué distingue a un agente de un simple chatbot?</h3>
+      <p>Un chatbot responde cuando le preguntas. Un agente como SofIA observa el estado del negocio, decide una acción y la ejecuta — sin que nadie se lo pida cada vez.</p>
+      <p><strong>Tu turno:</strong> piensa en una tarea de tu día a día que hoy haces "a mano". ¿Qué tendría que percibir un agente para hacerla por ti?</p>
+      <button class="link-btn" id="hintBtn">Ver una pista</button>
+      <div class="hint-box" id="hintBox">Pista: piensa en tres partes — qué datos necesita ver, qué regla usaría para decidir, y qué acción concreta ejecutaría.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <strong>Café SofIA</strong>
+  Un proyecto de ADEN · Prototipo navegable — Clase 5
+</footer>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-head">
+    <h3>Tu carrito</h3>
+    <button class="cart-close" id="cartCloseBtn">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-total">
+    <span>Total</span>
+    <span id="cartTotal">₡0</span>
+  </div>
+  <div style="padding: 0 22px 22px;">
+    <button class="btn btn-primary" id="confirmOrderBtn" style="width:100%; font-size:0.9rem;">Confirmar pedido</button>
+  </div>
+</div>
+
+<div class="cart-overlay" id="ticketOverlay"></div>
+<div class="cart-drawer" id="ticketDrawer" style="align-items:center; justify-content:center; padding: 24px; text-align:center;">
+  <div class="challenge-ticket" style="max-width: 280px;">
+    <span class="challenge-label" id="ticketNumber">Orden N.º 001</span>
+    <h3 style="margin-bottom: 6px;">¡Pedido confirmado!</h3>
+    <p style="margin: 0 0 16px; font-size: 0.92rem;">SofIA ya está preparando tu orden.</p>
+    <div id="ticketSummary" style="text-align:left; font-size:0.9rem; margin-bottom:14px;"></div>
+    <div style="border-top: 1px dashed var(--coffee-dark); padding-top:12px; font-family: var(--font-stamp); display:flex; justify-content:space-between;">
+      <span>Total</span><span id="ticketTotal">₡0</span>
+    </div>
+    <button class="btn btn-outline" id="ticketCloseBtn" style="margin-top:20px;">Cerrar</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
