@@ -3,7 +3,7 @@
   var cart = {};
 
   function loadProducts() {
-    return fetch('http://localhost:3000/api/products')
+    return fetch('/api/products')
       .then(function (response) {
         if (!response.ok) {
           throw new Error('No se pudo cargar el menú');
@@ -118,7 +118,7 @@
       };
     });
 
-    fetch('http://localhost:3000/api/orders', {
+    fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: items })

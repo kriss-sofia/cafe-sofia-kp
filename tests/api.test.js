@@ -55,6 +55,15 @@ test('GET /images/perezosa.jpg serves the hero photo', async () => {
   assert.match(response.headers['content-type'], /image\/jpeg/);
 });
 
+test('frontend uses relative API URLs for every device', async () => {
+  const response = await request(app).get('/script.js');
+
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(response.text, /https?:\/\/localhost(?::\d+)?/);
+  assert.match(response.text, /fetch\('\/api\/products'\)/);
+  assert.match(response.text, /fetch\('\/api\/orders'/);
+});
+
 test('POST /api/checkout creates a checkout session', async () => {
   const response = await request(app)
     .post('/api/checkout')
