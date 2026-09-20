@@ -173,6 +173,13 @@
   .btn-outline { background: transparent; color: var(--coffee-dark); border: 2px solid var(--coffee-dark); padding: 11px 22px; }
   .btn-outline:hover { background: var(--coffee-dark); color: var(--bg); }
 
+  .hero-art {
+    position: relative;
+    min-height: 390px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .vinyl-figure { display: flex; justify-content: center; }
   .vinyl {
     width: min(320px, 80vw);
@@ -214,6 +221,52 @@
     font-size: 0.85rem;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sloth-figure {
+    position: absolute;
+    right: -16px;
+    bottom: -2px;
+    width: 220px;
+    padding: 10px 10px 8px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    box-shadow: 8px 10px 0 rgba(90, 59, 34, 0.12);
+    transform: rotate(4deg);
+  }
+  .sloth {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .sloth-branch {
+    fill: none;
+    stroke: var(--coffee-dark);
+    stroke-width: 9;
+    stroke-linecap: round;
+  }
+  .sloth-leaf { fill: var(--olive); }
+  .sloth-leaf-alt { fill: var(--rust); }
+  .sloth-body, .sloth-face { fill: #8b7650; stroke: var(--coffee-dark); stroke-width: 3; }
+  .sloth-face { fill: #b49a6d; }
+  .sloth-mask { fill: #d8c59f; opacity: 0.9; }
+  .sloth-eye, .sloth-nose { fill: var(--coffee-dark); }
+  .sloth-smile, .sloth-claw {
+    fill: none;
+    stroke: var(--coffee-dark);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .sloth-caption {
+    display: block;
+    color: var(--coffee-dark);
+    font-family: var(--font-stamp);
+    font-size: 0.66rem;
+    text-align: center;
+  }
+  @media (max-width: 780px) {
+    .hero-art { min-height: 350px; }
+    .sloth-figure { right: 0; width: 185px; }
+  }
 
   section { padding: 70px 0; }
   .section-head { max-width: 60ch; margin-bottom: 40px; }
