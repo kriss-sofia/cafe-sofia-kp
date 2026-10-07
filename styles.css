@@ -321,7 +321,7 @@
   .record-card { border-top: 4px solid var(--disc-color, var(--rust)); }
   .record-card[data-flavor="espresso"] { --disc-color: var(--rust); }
   .record-card[data-flavor="latte"] { --disc-color: var(--olive); }
-  .record-card[data-flavor="capuccino"] { --disc-color: var(--brass); }
+  .record-card[data-flavor="capuchino"] { --disc-color: var(--brass); }
   .record-card h3 { font-family: var(--font-display); font-size: 1.4rem; margin: 0; color: var(--coffee-dark); }
   .record-card .price {
     font-family: var(--font-stamp);

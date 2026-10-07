@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
 const orderStore = require('./order-store');
+const appsScript = require('./apps-script');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -31,7 +32,7 @@ app.get('/images/perezosa.jpg', (req, res) => {
 const products = [
   { id: 'espresso', name: 'Espresso', price: 800, description: 'Corto, intenso y directo.', category: 'espresso', stock: 40 },
   { id: 'latte', name: 'Latte', price: 1500, description: 'Suave y cremoso con espuma sedosa.', category: 'latte', stock: 25 },
-  { id: 'capuccino', name: 'Capuccino', price: 2000, description: 'Clásico con espuma y canela.', category: 'capuccino', stock: 20 }
+  { id: 'capuchino', name: 'Capuccino', price: 2000, description: 'Clásico con espuma y canela.', category: 'capuchino', stock: 20 }
 ];
 
 const orders = [
@@ -43,7 +44,7 @@ const orders = [
     items: [
       { productId: 'espresso', name: 'Espresso', quantity: 1, unitPrice: 800, subtotal: 800 },
       { productId: 'latte', name: 'Latte', quantity: 1, unitPrice: 1500, subtotal: 1500 },
-      { productId: 'capuccino', name: 'Capuccino', quantity: 1, unitPrice: 2000, subtotal: 2000 }
+      { productId: 'capuchino', name: 'Capuccino', quantity: 1, unitPrice: 2000, subtotal: 2000 }
     ],
     createdAt: new Date().toISOString()
   },
@@ -60,6 +61,23 @@ const orders = [
 ];
 let nextLocalOrderNumber = 103;
 
+// Registra la venta en Apps Script sin tumbar el pedido si la cocina falla:
+// el pedido ya quedó guardado, así que el error se deja en los logs de Vercel.
+async function registerSaleInBackend(order) {
+  if (!appsScript.isConfigured()) {
+    console.warn('APPS_SCRIPT_URL no está configurada: la venta no se registró en Apps Script.');
+    return false;
+  }
+
+  try {
+    await appsScript.registerSale(order);
+    return true;
+  } catch (error) {
+    console.error(`No se pudo registrar el pedido ${order.id} en Apps Script:`, error.message);
+    return false;
+  }
+}
+
 function getOrderItems(items) {
   return items.map(({ productId, quantity }) => {
     const product = products.find((p) => p.id === productId);
@@ -69,6 +87,10 @@ function getOrderItems(items) {
     }
 
     const normalizedQuantity = Number(quantity || 0);
+
+    if (!Number.isInteger(normalizedQuantity) || normalizedQuantity <= 0) {
+      throw new Error(`Invalid quantity for ${productId}`);
+    }
 
     return {
       productId,
@@ -107,7 +129,12 @@ app.post('/api/orders', async (req, res) => {
     return res.status(400).json({ error: 'items are required' });
   }
 
-  const orderItems = getOrderItems(items);
+  let orderItems;
+  try {
+    orderItems = getOrderItems(items);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
   const total = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
   const order = {
@@ -119,14 +146,20 @@ app.post('/api/orders', async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
+  let savedOrder;
   try {
-    const savedOrder = await orderStore.saveOrder(order);
+    savedOrder = await orderStore.saveOrder(order);
     orders.unshift(savedOrder);
-    res.status(201).json(savedOrder);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'No se pudo guardar el pedido' });
+    return res.status(500).json({ error: 'No se pudo guardar el pedido' });
   }
+
+  // Momento exacto en que la compra queda confirmada: se avisa a la cocina.
+  // Se espera la respuesta antes de contestar, porque en Vercel la función
+  // se congela apenas responde y el aviso quedaría a medias.
+  await registerSaleInBackend(savedOrder);
+  res.status(201).json(savedOrder);
 });
 
 app.get('/api/orders', async (req, res) => {

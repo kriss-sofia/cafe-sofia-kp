@@ -30,6 +30,52 @@ test('POST /api/orders creates an order with total', async () => {
   assert.equal(response.body.total, 3100);
 });
 
+test('POST /api/orders notifies Apps Script with the order', async (t) => {
+  const calls = [];
+  process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  t.mock.method(global, 'fetch', async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body) });
+    return new Response(JSON.stringify({ ok: true, registrado: true }));
+  });
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; });
+
+  const response = await request(app)
+    .post('/api/orders')
+    .send({ items: [{ productId: 'capuchino', quantity: 2 }] });
+
+  assert.equal(response.status, 201);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, process.env.APPS_SCRIPT_URL);
+  assert.equal(calls[0].body.accion, 'registrar_venta');
+  assert.equal(calls[0].body.pedido.id, response.body.id);
+  assert.equal(calls[0].body.pedido.total, 4000);
+  assert.deepEqual(calls[0].body.pedido.items[0], {
+    productId: 'capuchino', name: 'Capuccino', quantity: 2, unitPrice: 2000, subtotal: 4000
+  });
+});
+
+test('POST /api/orders still confirms the order if Apps Script fails', async (t) => {
+  process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  t.mock.method(global, 'fetch', async () => new Response(JSON.stringify({ ok: false, error: 'boom' })));
+  t.mock.method(console, 'error', () => {});
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; });
+
+  const response = await request(app)
+    .post('/api/orders')
+    .send({ items: [{ productId: 'espresso', quantity: 1 }] });
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.total, 800);
+});
+
+test('POST /api/orders rejects unknown products and invalid quantities', async () => {
+  const unknown = await request(app).post('/api/orders').send({ items: [{ productId: 'mate', quantity: 1 }] });
+  const negative = await request(app).post('/api/orders').send({ items: [{ productId: 'latte', quantity: -3 }] });
+
+  assert.equal(unknown.status, 400);
+  assert.equal(negative.status, 400);
+});
+
 test('GET /api/health returns service status', async () => {
   const response = await request(app).get('/api/health');
 

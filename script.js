@@ -27,7 +27,7 @@
         PRODUCTS = [
           { id: 'espresso', name: 'Espresso', price: 800, desc: 'Corto, intenso y directo — como una buena decisión de negocio. Tueste oscuro, sin adornos.' },
           { id: 'latte', name: 'Latte', price: 1500, desc: 'Suave y con capas, como una buena conversación de sobremesa con SofIA. Espuma sedosa.' },
-          { id: 'capuccino', name: 'Capuccino', price: 2000, desc: 'El clásico de siempre, con espuma firme y un toque de canela para acompañar el jazz de fondo.' }
+          { id: 'capuchino', name: 'Capuccino', price: 2000, desc: 'El clásico de siempre, con espuma firme y un toque de canela para acompañar el jazz de fondo.' }
         ];
         renderMenu();
         renderCart();

@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 npm-debug.log*
 .runtime/
+
+# Copia de referencia del backend de Apps Script (no se despliega desde aquí)
+apps-script/
