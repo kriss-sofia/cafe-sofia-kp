@@ -24,16 +24,36 @@ async function callAppsScript(accion, datos) {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const startedAt = Date.now();
+  let step = 'enviando la acción';
 
   try {
-    const response = await fetch(url, {
+    // Apps Script ejecuta doPost y contesta con una redirección (302) a
+    // script.googleusercontent.com, donde deja la respuesta. Se sigue a mano
+    // para controlar cada paso y liberar la primera conexión.
+    let response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...datos, accion, token }),
-      redirect: 'follow',
+      redirect: 'manual',
       signal: controller.signal
     });
 
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      await discardBody(response);
+      if (!location) {
+        throw new Error(`Apps Script redirigió sin dirección (HTTP ${response.status})`);
+      }
+      step = 'buscando la respuesta';
+      response = await fetch(new URL(location, url), {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal
+      });
+    }
+
+    step = 'leyendo la respuesta';
     const text = await response.text();
     let payload;
     try {
@@ -51,11 +71,21 @@ async function callAppsScript(accion, datos) {
     return payload;
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error(`Apps Script no respondió en ${TIMEOUT_MS / 1000} segundos`);
+      throw new Error(`Apps Script no respondió en ${TIMEOUT_MS / 1000} segundos (paso: ${step}, ${Date.now() - startedAt} ms)`);
     }
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Descarta el cuerpo de una respuesta que no se va a leer, para que la
+// conexión quede libre y no se quede esperando.
+async function discardBody(response) {
+  try {
+    if (response.body) await response.body.cancel();
+  } catch (error) {
+    // No importa: la respuesta igual se descarta.
   }
 }
 

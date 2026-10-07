@@ -122,8 +122,18 @@ app.get('/api/products', (req, res) => {
   res.json(products);
 });
 
+// El navegador manda un checkoutId que se mantiene igual en cada reintento del
+// mismo pedido. Así Apps Script reconoce el pedido repetido y no lo anota dos
+// veces. Si no llega uno válido, se genera uno nuevo.
+function orderIdFor(checkoutId) {
+  if (typeof checkoutId === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(checkoutId)) {
+    return `order-${checkoutId}`;
+  }
+  return `order-${crypto.randomUUID()}`;
+}
+
 app.post('/api/orders', async (req, res) => {
-  const { items = [] } = req.body || {};
+  const { items = [], checkoutId } = req.body || {};
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items are required' });
@@ -138,7 +148,7 @@ app.post('/api/orders', async (req, res) => {
   const total = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
 
   const order = {
-    id: `order-${crypto.randomUUID()}`,
+    id: orderIdFor(checkoutId),
     orderNumber: null,
     status: 'pendiente',
     paymentMethod: SIMPE.method,
@@ -164,6 +174,12 @@ app.post('/api/orders', async (req, res) => {
   } else {
     console.warn('APPS_SCRIPT_URL no está configurada: el pedido no se registró en Apps Script.');
     order.orderNumber = nextLocalOrderNumber++;
+  }
+
+  // Reintento de un pedido que este servidor ya guardó: se devuelve el mismo.
+  const existing = orders.find((item) => item.id === order.id);
+  if (existing) {
+    return res.status(201).json({ ...existing, payment: simpePaymentFor(existing) });
   }
 
   let savedOrder;

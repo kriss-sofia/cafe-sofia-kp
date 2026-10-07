@@ -106,6 +106,23 @@
   document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
   document.getElementById('cartOverlay').addEventListener('click', closeCart);
 
+  // Código del pedido en curso. Se reusa en cada reintento del mismo carrito
+  // para que la cocina no anote el pedido dos veces; cambia si cambia el carrito.
+  var checkout = null;
+
+  function newCheckoutId() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function checkoutIdFor(items) {
+    var signature = JSON.stringify(items);
+    if (!checkout || checkout.signature !== signature) {
+      checkout = { id: newCheckoutId(), signature: signature };
+    }
+    return checkout.id;
+  }
+
   function submitOrder() {
     var ids = Object.keys(cart);
     if (!ids.length) return;
@@ -117,10 +134,15 @@
       };
     });
 
+    var confirmBtn = document.getElementById('confirmOrderBtn');
+    if (confirmBtn.disabled) return;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Registrando tu pedido…';
+
     fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: items })
+      body: JSON.stringify({ items: items, checkoutId: checkoutIdFor(items) })
     })
       .then(function (response) {
         if (!response.ok) {
@@ -140,6 +162,7 @@
         document.getElementById('ticketNumber').textContent = 'Orden N.º ' + String(order.orderNumber).padStart(3, '0');
         renderSimpePayment(order.payment);
 
+        checkout = null;
         cart = {};
         renderCart();
         closeCart();
@@ -149,6 +172,10 @@
       .catch(function (error) {
         console.error(error);
         alert(error.message || 'No se pudo confirmar el pedido.');
+      })
+      .then(function () {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirmar pedido';
       });
   }
 

@@ -64,6 +64,70 @@ test('POST /api/orders registers a pending SIMPE transfer in Apps Script', async
   });
 });
 
+test('POST /api/orders follows the Apps Script redirect to read the answer', async (t) => {
+  const calls = [];
+  process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  process.env.APPS_SCRIPT_TOKEN = 'token-de-prueba';
+  t.mock.method(global, 'fetch', async (url, options) => {
+    calls.push({ url: String(url), method: options.method, redirect: options.redirect });
+    if (calls.length === 1) {
+      return new Response('<HTML>Moved</HTML>', {
+        status: 302,
+        headers: { location: 'https://script.googleusercontent.com/macros/echo?user_content_key=abc' }
+      });
+    }
+    return new Response(JSON.stringify({ ok: true, registrado: true, numero: 301 }));
+  });
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; delete process.env.APPS_SCRIPT_TOKEN; });
+
+  const response = await request(app)
+    .post('/api/orders')
+    .send({ items: [{ productId: 'espresso', quantity: 1 }] });
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.orderNumber, 301);
+  assert.deepEqual(calls, [
+    { url: process.env.APPS_SCRIPT_URL, method: 'POST', redirect: 'manual' },
+    { url: 'https://script.googleusercontent.com/macros/echo?user_content_key=abc', method: 'GET', redirect: 'follow' }
+  ]);
+});
+
+test('POST /api/orders reuses the order id when the client retries with the same checkoutId', async (t) => {
+  const sentIds = [];
+  process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  process.env.APPS_SCRIPT_TOKEN = 'token-de-prueba';
+  let attempt = 0;
+  t.mock.method(global, 'fetch', async (url, options) => {
+    sentIds.push(JSON.parse(options.body).pedido.id);
+    attempt++;
+    // El primer intento falla (como un corte); el reintento llega bien.
+    if (attempt === 1) return new Response(JSON.stringify({ ok: false, error: 'corte' }));
+    return new Response(JSON.stringify({ ok: true, duplicado: true, numero: 401 }));
+  });
+  t.mock.method(console, 'error', () => {});
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; delete process.env.APPS_SCRIPT_TOKEN; });
+
+  const body = { items: [{ productId: 'latte', quantity: 1 }], checkoutId: 'c7a1e2b4-5d6f-4a8b-9c0d-1e2f3a4b5c6d' };
+  const first = await request(app).post('/api/orders').send(body);
+  const retry = await request(app).post('/api/orders').send(body);
+
+  assert.equal(first.status, 502);
+  assert.equal(retry.status, 201);
+  assert.equal(sentIds[0], 'order-c7a1e2b4-5d6f-4a8b-9c0d-1e2f3a4b5c6d');
+  assert.equal(sentIds[1], sentIds[0]);
+  assert.equal(retry.body.id, sentIds[0]);
+  assert.equal(retry.body.orderNumber, 401);
+});
+
+test('POST /api/orders ignores an invalid checkoutId', async () => {
+  const response = await request(app)
+    .post('/api/orders')
+    .send({ items: [{ productId: 'espresso', quantity: 1 }], checkoutId: '<script>' });
+
+  assert.equal(response.status, 201);
+  assert.match(response.body.id, /^order-[0-9a-f-]{36}$/);
+});
+
 test('POST /api/orders does not call Apps Script without APPS_SCRIPT_TOKEN', async (t) => {
   process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
   const fetchMock = t.mock.method(global, 'fetch', async () => new Response('{"ok":true}'));
