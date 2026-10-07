@@ -61,21 +61,21 @@ const orders = [
 ];
 let nextLocalOrderNumber = 103;
 
-// Registra la venta en Apps Script sin tumbar el pedido si la cocina falla:
-// el pedido ya quedó guardado, así que el error se deja en los logs de Vercel.
-async function registerSaleInBackend(order) {
-  if (!appsScript.isConfigured()) {
-    console.warn('APPS_SCRIPT_URL no está configurada: la venta no se registró en Apps Script.');
-    return false;
-  }
+// Datos para cobrar por SIMPE Móvil. No son secretos: el cliente los necesita
+// ver para transferir, igual que un alias de cuenta.
+const SIMPE = {
+  method: 'simpe',
+  phone: '8981-6070',
+  holder: 'Kriss Pacheco'
+};
 
-  try {
-    await appsScript.registerSale(order);
-    return true;
-  } catch (error) {
-    console.error(`No se pudo registrar el pedido ${order.id} en Apps Script:`, error.message);
-    return false;
-  }
+// Instrucciones de pago que ve el cliente en su ticket.
+function simpePaymentFor(order) {
+  return {
+    ...SIMPE,
+    amount: order.total,
+    reference: `Orden ${order.orderNumber}`
+  };
 }
 
 function getOrderItems(items) {
@@ -139,27 +139,46 @@ app.post('/api/orders', async (req, res) => {
 
   const order = {
     id: `order-${crypto.randomUUID()}`,
-    orderNumber: nextLocalOrderNumber++,
+    orderNumber: null,
     status: 'pendiente',
+    paymentMethod: SIMPE.method,
     total,
     items: orderItems,
     createdAt: new Date().toISOString()
   };
 
+  // El pedido queda PENDIENTE en Apps Script hasta que un administrador
+  // confirme la transferencia: todavía no descuenta stock ni suma a la caja.
+  // La cocina asigna el número de orden (único y correlativo). Si no lo
+  // anota, el cliente no recibe los datos para pagar: nadie debe transferir
+  // por un pedido que no quedó registrado.
+  if (appsScript.isConfigured()) {
+    try {
+      const pending = await appsScript.registerPendingTransfer(order);
+      if (!pending.numero) throw new Error('Apps Script no devolvió el número de orden');
+      order.orderNumber = Number(pending.numero);
+    } catch (error) {
+      console.error(`No se pudo registrar el pedido ${order.id} en Apps Script:`, error.message);
+      return res.status(502).json({ error: 'No pudimos registrar tu pedido. Intenta de nuevo en unos segundos.' });
+    }
+  } else {
+    console.warn('APPS_SCRIPT_URL no está configurada: el pedido no se registró en Apps Script.');
+    order.orderNumber = nextLocalOrderNumber++;
+  }
+
   let savedOrder;
   try {
-    savedOrder = await orderStore.saveOrder(order);
+    // Sin base de datos, saveOrder devuelve el mismo pedido. Se conserva el
+    // número que asignó la cocina, que es el que el cliente pone en el SIMPE.
+    const stored = await orderStore.saveOrder(order);
+    savedOrder = { ...stored, orderNumber: order.orderNumber };
     orders.unshift(savedOrder);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'No se pudo guardar el pedido' });
   }
 
-  // Momento exacto en que la compra queda confirmada: se avisa a la cocina.
-  // Se espera la respuesta antes de contestar, porque en Vercel la función
-  // se congela apenas responde y el aviso quedaría a medias.
-  await registerSaleInBackend(savedOrder);
-  res.status(201).json(savedOrder);
+  res.status(201).json({ ...savedOrder, payment: simpePaymentFor(savedOrder) });
 });
 
 app.get('/api/orders', async (req, res) => {

@@ -138,6 +138,7 @@
         document.getElementById('ticketSummary').innerHTML = lines.join('');
         document.getElementById('ticketTotal').textContent = fmt(order.total);
         document.getElementById('ticketNumber').textContent = 'Orden N.º ' + String(order.orderNumber).padStart(3, '0');
+        renderSimpePayment(order.payment);
 
         cart = {};
         renderCart();
@@ -150,6 +151,28 @@
         alert(error.message || 'No se pudo confirmar el pedido.');
       });
   }
+
+  // Datos para pagar por SIMPE Móvil (vienen del servidor junto con el pedido).
+  function renderSimpePayment(payment) {
+    document.getElementById('simpePhone').textContent = payment.phone;
+    document.getElementById('simpeHolder').textContent = payment.holder;
+    document.getElementById('simpeAmount').textContent = fmt(payment.amount);
+    document.getElementById('simpeReference').textContent = payment.reference;
+    var copyBtn = document.getElementById('simpeCopyBtn');
+    copyBtn.textContent = 'Copiar número';
+    copyBtn.setAttribute('data-phone', payment.phone.replace(/\D/g, ''));
+  }
+
+  document.getElementById('simpeCopyBtn').addEventListener('click', function () {
+    var btn = this;
+    var phone = btn.getAttribute('data-phone') || '';
+    var done = function () { btn.textContent = '¡Número copiado!'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(phone).then(done, function () { window.prompt('Copia el número:', phone); });
+    } else {
+      window.prompt('Copia el número:', phone);
+    }
+  });
 
   document.getElementById('confirmOrderBtn').addEventListener('click', submitOrder);
   document.getElementById('ticketCloseBtn').addEventListener('click', function () {

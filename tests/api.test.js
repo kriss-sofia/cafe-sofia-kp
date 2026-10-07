@@ -28,15 +28,18 @@ test('POST /api/orders creates an order with total', async () => {
   assert.equal(typeof response.body.orderNumber, 'number');
   assert.equal(response.body.status, 'pendiente');
   assert.equal(response.body.total, 3100);
+  assert.equal(response.body.payment.method, 'simpe');
+  assert.equal(response.body.payment.phone, '8981-6070');
+  assert.equal(response.body.payment.amount, 3100);
 });
 
-test('POST /api/orders notifies Apps Script with the order', async (t) => {
+test('POST /api/orders registers a pending SIMPE transfer in Apps Script', async (t) => {
   const calls = [];
   process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
   process.env.APPS_SCRIPT_TOKEN = 'token-de-prueba';
   t.mock.method(global, 'fetch', async (url, options) => {
     calls.push({ url, body: JSON.parse(options.body) });
-    return new Response(JSON.stringify({ ok: true, registrado: true }));
+    return new Response(JSON.stringify({ ok: true, registrado: true, numero: 215 }));
   });
   t.after(() => { delete process.env.APPS_SCRIPT_URL; delete process.env.APPS_SCRIPT_TOKEN; });
 
@@ -47,12 +50,17 @@ test('POST /api/orders notifies Apps Script with the order', async (t) => {
   assert.equal(response.status, 201);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, process.env.APPS_SCRIPT_URL);
-  assert.equal(calls[0].body.accion, 'registrar_venta');
+  assert.equal(calls[0].body.accion, 'registrar_transferencia');
   assert.equal(calls[0].body.token, 'token-de-prueba');
   assert.equal(calls[0].body.pedido.id, response.body.id);
+  assert.equal(calls[0].body.pedido.metodo, 'simpe');
   assert.equal(calls[0].body.pedido.total, 4000);
   assert.deepEqual(calls[0].body.pedido.items[0], {
     productId: 'capuchino', name: 'Capuccino', quantity: 2, unitPrice: 2000, subtotal: 4000
+  });
+  assert.equal(response.body.orderNumber, 215);
+  assert.deepEqual(response.body.payment, {
+    method: 'simpe', phone: '8981-6070', holder: 'Kriss Pacheco', amount: 4000, reference: 'Orden 215'
   });
 });
 
@@ -66,12 +74,13 @@ test('POST /api/orders does not call Apps Script without APPS_SCRIPT_TOKEN', asy
     .post('/api/orders')
     .send({ items: [{ productId: 'latte', quantity: 1 }] });
 
-  assert.equal(response.status, 201);
+  assert.equal(response.status, 502);
+  assert.equal(response.body.payment, undefined);
   assert.equal(fetchMock.mock.callCount(), 0);
   assert.match(errorMock.mock.calls[0].arguments[1], /APPS_SCRIPT_TOKEN/);
 });
 
-test('POST /api/orders still confirms the order if Apps Script rejects it', async (t) => {
+test('POST /api/orders hides the SIMPE details if Apps Script rejects the order', async (t) => {
   process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
   process.env.APPS_SCRIPT_TOKEN = 'token-equivocado';
   t.mock.method(global, 'fetch', async () => new Response(JSON.stringify({ ok: false, error: 'no autorizado' })));
@@ -82,8 +91,9 @@ test('POST /api/orders still confirms the order if Apps Script rejects it', asyn
     .post('/api/orders')
     .send({ items: [{ productId: 'espresso', quantity: 1 }] });
 
-  assert.equal(response.status, 201);
-  assert.equal(response.body.total, 800);
+  assert.equal(response.status, 502);
+  assert.match(response.body.error, /No pudimos registrar tu pedido/);
+  assert.equal(response.body.payment, undefined);
 });
 
 test('POST /api/orders rejects unknown products and invalid quantities', async () => {

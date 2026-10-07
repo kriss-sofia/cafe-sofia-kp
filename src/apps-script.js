@@ -59,13 +59,15 @@ async function callAppsScript(accion, datos) {
   }
 }
 
-// Avisa a la cocina que se confirmó una compra: descuenta stock, suma a la
-// caja y anota la venta. Es idempotente del lado de Apps Script (por order.id).
-function registerSale(order) {
-  return callAppsScript('registrar_venta', {
+// Anota en la cocina un pedido que se paga por transferencia (SIMPE Móvil).
+// Queda PENDIENTE: no descuenta stock ni suma a la caja hasta que un
+// administrador lo confirme. Devuelve { numero }, el número de orden que
+// asigna Apps Script. Es idempotente del lado de Apps Script (por order.id).
+function registerPendingTransfer(order) {
+  return callAppsScript('registrar_transferencia', {
     pedido: {
       id: order.id,
-      orderNumber: order.orderNumber,
+      metodo: order.paymentMethod,
       total: order.total,
       createdAt: order.createdAt,
       items: order.items.map((item) => ({
@@ -82,5 +84,5 @@ function registerSale(order) {
 module.exports = {
   isConfigured,
   callAppsScript,
-  registerSale
+  registerPendingTransfer
 };

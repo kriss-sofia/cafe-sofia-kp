@@ -139,14 +139,22 @@
 </div>
 
 <div class="cart-overlay" id="ticketOverlay"></div>
-<div class="cart-drawer" id="ticketDrawer" style="align-items:center; justify-content:center; padding: 24px; text-align:center;">
+<div class="cart-drawer" id="ticketDrawer" style="align-items:center; justify-content:safe center; padding: 24px; text-align:center; overflow-y:auto;">
   <div class="challenge-ticket" style="max-width: 280px;">
     <span class="challenge-label" id="ticketNumber">Orden N.º 001</span>
-    <h3 style="margin-bottom: 6px;">¡Pedido confirmado!</h3>
-    <p style="margin: 0 0 16px; font-size: 0.92rem;">SofIA ya está preparando tu orden.</p>
+    <h3 style="margin-bottom: 6px;">¡Pedido recibido!</h3>
+    <p style="margin: 0 0 16px; font-size: 0.92rem;">Paga por SIMPE Móvil y SofIA prepara tu orden apenas confirmemos la transferencia.</p>
     <div id="ticketSummary" style="text-align:left; font-size:0.9rem; margin-bottom:14px;"></div>
     <div style="border-top: 1px dashed var(--coffee-dark); padding-top:12px; font-family: var(--font-stamp); display:flex; justify-content:space-between;">
       <span>Total</span><span id="ticketTotal">₡0</span>
+    </div>
+    <div class="simpe-box">
+      <span class="challenge-label" style="margin-bottom:6px;">SIMPE Móvil</span>
+      <div class="simpe-phone" id="simpePhone">0000-0000</div>
+      <div style="font-size:0.85rem; margin-bottom:10px;">a nombre de <strong id="simpeHolder"></strong></div>
+      <button class="btn btn-primary" id="simpeCopyBtn" style="width:100%; font-size:0.85rem;">Copiar número</button>
+      <div class="simpe-row"><span>Monto exacto</span><strong id="simpeAmount">₡0</strong></div>
+      <div class="simpe-row"><span>En el detalle escribe</span><strong id="simpeReference">Orden 0</strong></div>
     </div>
     <button class="btn btn-outline" id="ticketCloseBtn" style="margin-top:20px;">Cerrar</button>
   </div>
