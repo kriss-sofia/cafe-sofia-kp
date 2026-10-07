@@ -33,11 +33,12 @@ test('POST /api/orders creates an order with total', async () => {
 test('POST /api/orders notifies Apps Script with the order', async (t) => {
   const calls = [];
   process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  process.env.APPS_SCRIPT_TOKEN = 'token-de-prueba';
   t.mock.method(global, 'fetch', async (url, options) => {
     calls.push({ url, body: JSON.parse(options.body) });
     return new Response(JSON.stringify({ ok: true, registrado: true }));
   });
-  t.after(() => { delete process.env.APPS_SCRIPT_URL; });
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; delete process.env.APPS_SCRIPT_TOKEN; });
 
   const response = await request(app)
     .post('/api/orders')
@@ -47,6 +48,7 @@ test('POST /api/orders notifies Apps Script with the order', async (t) => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, process.env.APPS_SCRIPT_URL);
   assert.equal(calls[0].body.accion, 'registrar_venta');
+  assert.equal(calls[0].body.token, 'token-de-prueba');
   assert.equal(calls[0].body.pedido.id, response.body.id);
   assert.equal(calls[0].body.pedido.total, 4000);
   assert.deepEqual(calls[0].body.pedido.items[0], {
@@ -54,11 +56,27 @@ test('POST /api/orders notifies Apps Script with the order', async (t) => {
   });
 });
 
-test('POST /api/orders still confirms the order if Apps Script fails', async (t) => {
+test('POST /api/orders does not call Apps Script without APPS_SCRIPT_TOKEN', async (t) => {
   process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
-  t.mock.method(global, 'fetch', async () => new Response(JSON.stringify({ ok: false, error: 'boom' })));
-  t.mock.method(console, 'error', () => {});
+  const fetchMock = t.mock.method(global, 'fetch', async () => new Response('{"ok":true}'));
+  const errorMock = t.mock.method(console, 'error', () => {});
   t.after(() => { delete process.env.APPS_SCRIPT_URL; });
+
+  const response = await request(app)
+    .post('/api/orders')
+    .send({ items: [{ productId: 'latte', quantity: 1 }] });
+
+  assert.equal(response.status, 201);
+  assert.equal(fetchMock.mock.callCount(), 0);
+  assert.match(errorMock.mock.calls[0].arguments[1], /APPS_SCRIPT_TOKEN/);
+});
+
+test('POST /api/orders still confirms the order if Apps Script rejects it', async (t) => {
+  process.env.APPS_SCRIPT_URL = 'https://script.google.com/macros/s/test/exec';
+  process.env.APPS_SCRIPT_TOKEN = 'token-equivocado';
+  t.mock.method(global, 'fetch', async () => new Response(JSON.stringify({ ok: false, error: 'no autorizado' })));
+  t.mock.method(console, 'error', () => {});
+  t.after(() => { delete process.env.APPS_SCRIPT_URL; delete process.env.APPS_SCRIPT_TOKEN; });
 
   const response = await request(app)
     .post('/api/orders')

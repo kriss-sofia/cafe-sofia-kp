@@ -1,6 +1,7 @@
 // Cliente del backend de Google Apps Script (la "cocina").
-// Corre solo en el servidor de Vercel: la URL del backend vive en la variable
-// de entorno APPS_SCRIPT_URL y nunca llega al navegador.
+// Corre solo en el servidor de Vercel: la URL del backend (APPS_SCRIPT_URL) y
+// el token compartido (APPS_SCRIPT_TOKEN) viven en variables de entorno y
+// nunca llegan al navegador.
 
 const TIMEOUT_MS = 15000;
 
@@ -10,10 +11,15 @@ function isConfigured() {
 
 // Envía una acción al doPost de Apps Script y devuelve su respuesta JSON.
 // Apps Script siempre responde HTTP 200; el resultado real viene en { ok, error }.
+// El token va en el cuerpo porque doPost no puede leer los encabezados HTTP.
 async function callAppsScript(accion, datos) {
   const url = process.env.APPS_SCRIPT_URL;
+  const token = process.env.APPS_SCRIPT_TOKEN;
   if (!url) {
     throw new Error('Falta la variable de entorno APPS_SCRIPT_URL');
+  }
+  if (!token) {
+    throw new Error('Falta la variable de entorno APPS_SCRIPT_TOKEN');
   }
 
   const controller = new AbortController();
@@ -23,7 +29,7 @@ async function callAppsScript(accion, datos) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accion, ...datos }),
+      body: JSON.stringify({ ...datos, accion, token }),
       redirect: 'follow',
       signal: controller.signal
     });
